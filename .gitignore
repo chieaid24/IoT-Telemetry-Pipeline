@@ -73,3 +73,5 @@ jacoco.exec
 
 .cache/
 .tmp/
+
+gcm-diagnose.log
