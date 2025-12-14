@@ -56,7 +56,7 @@ resource "random_string" "suffix" {
 }
 
 ############################################
-# VPC (simplified example)
+# VPC
 ############################################
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
@@ -84,7 +84,7 @@ module "vpc" {
 }
 
 ############################################
-# EKS Cluster (simplified example)
+# EKS Cluster
 ############################################
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
