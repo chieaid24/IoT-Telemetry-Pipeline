@@ -3,6 +3,40 @@ provider "aws" {
   region = var.region
 }
 
+# Required for public ECR where Karpenter artifacts are hosted
+provider "aws" {
+  region = "us-east-1"
+  alias  = "virginia"
+}
+
+# Setup kubernetes provider, and get token from AWS CLI
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    # This requires the awscli to be installed locally where Terraform is executed
+    args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+  }
+}
+
+# sStup helm provider, and get token from AWS CLI
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      # This requires the awscli to be installed locally where Terraform is executed
+      args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+    }
+  }
+}
+
 # Filter out local zones, which are not currently supported 
 # with managed node groups
 data "aws_availability_zones" "available" {
@@ -13,7 +47,7 @@ data "aws_availability_zones" "available" {
 }
 
 locals {
-  cluster_name = "iot-pipeline-${random_string.suffix.result}"
+  cluster_name = "iot-pipeline"
 }
 
 resource "random_string" "suffix" {
@@ -21,6 +55,9 @@ resource "random_string" "suffix" {
   special = false
 }
 
+############################################
+# VPC (simplified example)
+############################################
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.8.1"
@@ -28,10 +65,10 @@ module "vpc" {
   name = "iot-pipeline-vpc"
 
   cidr = "10.0.0.0/16"
-  azs  = slice(data.aws_availability_zones.available.names, 0, 3)
+  azs  = slice(data.aws_availability_zones.available.names, 0, 2)
 
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets  = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+  public_subnets  = ["10.0.3.0/24", "10.0.4.0/24"]
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
@@ -46,6 +83,9 @@ module "vpc" {
   }
 }
 
+############################################
+# EKS Cluster (simplified example)
+############################################
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.8.5"
@@ -73,20 +113,20 @@ module "eks" {
     one = {
       name = "app-group"
 
-      instance_types = ["m5.large"]
+      instance_types = ["t3.small"]
 
       min_size     = 1
-      max_size     = 3
-      desired_size = 2
+      max_size     = 1
+      desired_size = 1
     }
 
     two = {
       name = "broker-group"
 
-      instance_types = ["m5.large"]
+      instance_types = ["t3.small"]
 
       min_size     = 1
-      max_size     = 2
+      max_size     = 1
       desired_size = 1
     }
   }
@@ -107,4 +147,63 @@ module "irsa-ebs-csi" {
   provider_url                  = module.eks.oidc_provider
   role_policy_arns              = [data.aws_iam_policy.ebs_csi_policy.arn]
   oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
+}
+
+
+
+############################################
+# EKS Blueprints - AWS Load Balancer Controller
+############################################
+
+module "eks_blueprints_addons" {
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 1.13"
+
+
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  eks_addons = {
+    coredns = {
+      most_recent = true
+    }
+    vpc-cni = {
+      most_recent = true
+    }
+    kube-proxy = {
+      most_recent = true
+    }
+  }
+
+  enable_aws_load_balancer_controller    = true
+  aws_load_balancer_controller = {
+    set = [
+      {
+        name  = "vpcId"
+        value = module.vpc.vpc_id
+      },
+      {
+        name  = "podDisruptionBudget.maxUnavailable"
+        value = 1
+      },
+      {
+        name  = "enableServiceMutatorWebhook"
+        value = "false"
+      }
+    ]
+  }
+
+  # enable_cluster_proportional_autoscaler = true
+  # enable_karpenter                       = true
+  # enable_kube_prometheus_stack           = true
+  # enable_metrics_server                  = true
+  # enable_external_dns                    = true
+  # enable_cert_manager                    = true
+  # cert_manager_route53_hosted_zone_arns  = ["arn:aws:route53:::hostedzone/XXXXXXXXXXXXX"]
+
+  tags = {
+    Environment = "dev"
+  }
 }
