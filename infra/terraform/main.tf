@@ -91,7 +91,7 @@ module "eks" {
   version = "20.8.5"
 
   cluster_name    = local.cluster_name
-  cluster_version = "1.29"
+  cluster_version = "1.32"
 
   cluster_endpoint_public_access           = true
   enable_cluster_creator_admin_permissions = true
@@ -105,9 +105,9 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  eks_managed_node_group_defaults = {
-    ami_type = "AL2_x86_64"
-  }
+  # eks_managed_node_group_defaults = {
+  #   ami_type = "AL2_x86_64"
+  # }
 
   eks_managed_node_groups = {
     default = {
@@ -194,4 +194,50 @@ module "eks_blueprints_addons" {
   tags = {
     Environment = "dev"
   }
+}
+
+############################################
+# VerneMQ Cluster
+############################################
+
+resource "helm_release" "vernemq_cluster" {
+    name = "vernemq-cluster"
+    chart = "vernemq/vernemq"
+    set {
+      name  = "replicaCount"
+      value = 2
+    }
+    set {
+      name  = "additionalEnv"
+      value = "['DOCKER_VERNEMQ_ALLOW_ANONYMOUS': 'on']"
+    }
+    set {
+      name = "service.enabled"
+      value = "true"
+    }
+    set {
+      name = "service.type"
+      value = "LoadBalancer"
+    }
+
+    set {
+      name = "service.mqtt.enabled"
+      value = "true"
+    }
+
+    set {
+      name = "service.mqtt.port"
+      value = "1883"
+    }
+
+    set {
+      name = "service.mqtt.nodePort"
+      value = "1883"
+    }
+
+    depends_on = [
+      "kubernetes_cluster_role_binding.tiller",
+      "kubernetes_service_account.tiller",
+      "null_resource.voyager_secret"
+    ]
 }
