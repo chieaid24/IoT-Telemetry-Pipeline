@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: YOUR_ECR_IMAGE_URI_HERE
+          image: 714454206433.dkr.ecr.us-east-1.amazonaws.com/iot-telemetry-pipeline:frontend
           ports:
             - containerPort: 3000
