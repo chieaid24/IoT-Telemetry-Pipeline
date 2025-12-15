@@ -23,12 +23,14 @@ jobs:
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
+      with:
+        mask-password: true
 
     - name: Build, tag, and push the image to Amazon ECR
       id: build-image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: ${{ vars.REPO_NAME }}
+        ECR_REPOSITORY: ${{ vars.ECR_REPO_NAME }}
         IMAGE_TAG: latest
       run: |
         # Build the FRONTEND container and push the image to ECR
