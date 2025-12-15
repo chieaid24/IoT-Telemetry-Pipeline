@@ -110,24 +110,12 @@ module "eks" {
   }
 
   eks_managed_node_groups = {
-    one = {
-      name = "app-group"
-
+    default = {
       instance_types = ["t3.small"]
 
-      min_size     = 1
-      max_size     = 1
-      desired_size = 1
-    }
-
-    two = {
-      name = "broker-group"
-
-      instance_types = ["t3.small"]
-
-      min_size     = 1
-      max_size     = 1
-      desired_size = 1
+      min_size     = 2
+      max_size     = 2
+      desired_size = 2
     }
   }
 }
