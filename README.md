@@ -28,6 +28,4 @@ A cloud-native, distributed telemetry system that simulates, ingests, processes,
 
 ## Status
 
-🚧 In Progress
-
-Core ingestion, streaming, alerting, and query paths are implemented. Planned enhancements include CI/CD automation, observability, horizontal scaling, anomaly detection, and geospatial visualization.
+Currently in progress!
