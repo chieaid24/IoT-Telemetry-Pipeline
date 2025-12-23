@@ -1,12 +1,12 @@
 # Cloud-Native IoT Telemetry & Alerting Platform
 
-A cloud-native, distributed telemetry system that simulates, ingests, processes, and visualizes real-time IoT sensor data at scale. The platform demonstrates modern Cloud Engineering patterns using Kubernetes, streaming data pipelines, and managed AWS services.
+A cloud-native, distributed telemetry system that simulates, ingests, processes, and visualizes real-time IoT sensor data at scale.
 ## System Architecture (WIP)
 <img width="1200" height="1400" alt="image" src="https://github.com/user-attachments/assets/532d5e7f-9533-4763-bda9-7e8dd123e897" />
 
 ## Overview
 
-- Simulates ~500 IoT sensors publishing telemetry over MQTT
+- Simulates ~10000 IoT sensors publishing telemetry over MQTT
 
 - Ingests and streams data via VerneMQ, AWS Kinesis Data Streams, and Spring Boot services
 
